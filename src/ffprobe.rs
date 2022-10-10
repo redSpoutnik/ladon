@@ -37,7 +37,6 @@ fn build_stream_from(mut chuncks: Split<&str>) -> Option<Stream> {
                 if(is_valid(codec)) {
                     stream.set_codec(codec);
                 } else {
-                    println!("Invalid codec: {:?}", codec);
                     break;
                 }
             },

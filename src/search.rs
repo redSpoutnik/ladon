@@ -1,6 +1,6 @@
 use crate::ffprobe::ffprobe;
 use crate::ffprobe::streams::Stream;
-use crate::path::validation::{validate_media_directory, validate_output_file};
+use crate::path::validation::{validate_directory, validate_output_file};
 use crate::path::media::{is_avi_file, is_non_avi_video_file};
 use std::borrow::Borrow;
 use std::fs::{read_dir, DirEntry, File, FileType};
@@ -88,7 +88,7 @@ fn start_searching(path: &str, output_path: &str) {
 
 pub fn search_medias_to_transcode(directory_path: &str, output_path: &str) {
     println!("search directory: {:?}, write output: {:?}", directory_path, output_path);
-    validate_media_directory(directory_path);
+    validate_directory(directory_path);
     validate_output_file(output_path);
     start_searching(directory_path, output_path);
 }
