@@ -54,7 +54,7 @@ pub fn ffprobe<'a>(media_location: &str) -> Result<impl Iterator<Item = Stream>>
 }
   
 pub mod parsers {
-    use crate::ffprobe::streams::Stream;
+    use crate::ffprobe::streams::{Stream, from};
     use substring::Substring;
     use core::str::Split;
 
@@ -89,7 +89,7 @@ pub mod parsers {
                 "codec_type" => {
                     let codec = value(chunck, split_index);
                     if(is_valid(codec)) {
-                        stream.set_codec(codec);
+                        stream.set_codec(from(codec));
                     } else {
                         break;
                     }
@@ -121,9 +121,37 @@ pub mod parsers {
 
 pub mod streams {
     use std::borrow::Borrow;
+    use std::cmp::Eq;
+    use std::fmt::{self, Debug};
+
+    #[derive(PartialEq, Eq)]
+    pub enum Codec {
+        Video,
+        Audio,
+        Subtitle,
+    }
+
+    impl Debug for Codec {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                Self::Video => write!(f, "Video"),
+                Self::Audio => write!(f, "Audio"),
+                Self::Subtitle => write!(f, "Subtitle"),
+            }
+        }
+    }
+
+    pub fn from(codec_type: &str) -> Codec {
+        return match codec_type {
+            "video" => Codec::Video,
+            "audio" => Codec::Audio,
+            "subtitle" => Codec::Subtitle,
+            _ => panic!("Unrecognize codec type : '{codec_type:?}'"),
+        }
+    }
 
     pub struct Stream {
-        codec: Option<String>,
+        codec: Option<Codec>,
         name: Option<String>,
         language: Option<String>,
     }
@@ -138,12 +166,12 @@ pub mod streams {
             }
         }
 
-        pub fn get_codec(&self) -> Option<&String> {
+        pub fn get_codec(&self) -> Option<&Codec> {
             return self.codec.as_ref();
         }
 
-        pub fn set_codec(&mut self, codec: &str) {
-            self.codec = Some(codec.to_string());
+        pub fn set_codec(&mut self, codec: Codec) {
+            self.codec = Some(codec);
         }
 
         pub fn get_name(&self) -> Option<&String> {
@@ -164,21 +192,21 @@ pub mod streams {
     
         pub fn is_video(&self) -> bool {
             return match self.get_codec() {
-                Some(codec) => "video".eq(codec),
+                Some(codec) => Codec::Video.eq(codec),
                 None => false,
             };
         }
 
         pub fn is_audio(&self) -> bool {
             return match self.get_codec() {
-                Some(codec) => "audio".eq(codec),
+                Some(codec) => Codec::Audio.eq(codec),
                 None => false,
             };
         }
 
         pub fn is_subtitle(&self) -> bool {
             return match self.get_codec() {
-                Some(codec) => "subtitle".eq(codec),
+                Some(codec) => Codec::Subtitle.eq(codec),
                 None => false,
             };
         }
