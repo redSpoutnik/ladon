@@ -10,3 +10,4 @@ clap = { version = "3.0", features = ["derive"] }
 exitcode = "1.1.2"
 itertools = "0.10.3"
 substring = "1.4.5"
+console = "0.15.2"

@@ -1,26 +1,21 @@
 use crate::path::validation::{validate_directory, validate_input_file};
 use crate::path::media::is_media;
+use crate::terminal::{Terminal, Exporter};
 use std::fs::{copy, File};
-use std::io::{BufRead, BufReader};
+use std::io::{Result, BufRead, BufReader};
 use std::path::Path;
-
-fn print_export_start(lines_number: usize) {
-    print!("Export-- : 0/{lines_number}");
-}
-
-fn print_current_export(media: &str, index: i32, lines_number: usize) {
-    print!("\rExport {media} : {index}/{lines_number}");
-}
-
-fn print_export_done(export_directory: &str) {
-    println!();
-    println!("Export to {export_directory} ended");
-}
 
 fn file_reader(medias_list: &str) -> BufReader<File> {
     return match File::open(medias_list) {
         Ok(medias_list_file) => BufReader::new(medias_list_file),
         Err(e) => panic!("Could not open File Reader for {medias_list}!"),
+    }
+}
+
+fn to_line(result: Result<String>) -> String {
+    return match result {
+        Ok(line) => line,
+        Err(e) => panic!("Error occured reading line from file : {e:?}"),
     }
 }
 
@@ -31,10 +26,7 @@ fn is_valid(media: &String) -> bool {
 
 fn read_lines(medias_list: &str) -> Vec<String> {
     return file_reader(medias_list).lines()
-    .map(|result| match result {
-        Ok(line) => line,
-        Err(e) => panic!("Error occured reading line from {medias_list} : {e:?}"),
-    })
+    .map(to_line)
     .filter(is_valid)
     .collect(); 
 }
@@ -58,16 +50,14 @@ fn export(media: &str, export_directory: &str) {
 
 fn process_medias_export(medias_list: &str, export_directory: &str) {
     let lines = read_lines(medias_list);
-    let lines_number = lines.len();
-    let mut index = 1;
-    print_export_start(lines_number);
+    let mut exporter_terminal: Terminal = Exporter::new(lines.len(), export_directory);
+    exporter_terminal.export_start();
     for line in lines {
         let media = &line;
-        print_current_export(media, index, lines_number);
+        exporter_terminal.update_export(media);
         export(media, export_directory);
-        index += 1;
     }
-    print_export_done(export_directory);
+    exporter_terminal.export_done();
 }
 
 pub fn export_medias(medias_list: &str, export_directory: &str) {

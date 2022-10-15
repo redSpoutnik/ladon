@@ -1,6 +1,7 @@
 #![allow(unused)]
 
 mod path;
+mod terminal;
 mod ffprobe;
 mod search;
 mod export;
