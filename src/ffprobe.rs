@@ -1,66 +1,20 @@
+use crate::ffprobe::streams::Stream;
+use crate::ffprobe::parsers::to_stream;
 use std::process::{Command, Stdio, Child, ChildStdout};
 use std::io::{Result, BufReader, BufRead, Lines, Error, ErrorKind};
-use core::str::Split;
-use crate::ffprobe::streams::Stream;
-use substring::Substring;
 
-fn split_index(chunck: &str) -> usize {
-    return match chunck.find('=') {
-        Some(index) => index,
-        None => panic!("Invalid stream chunck: {}", chunck),
-    };
+fn get_stream(option: Option<Stream>) -> Stream {
+    return match option {
+        Some(stream) => stream,
+        None => panic!("Found empty stream after filtering!")
+    }
 }
 
-fn key(chunck: &str, split_index: usize) -> &str {
-    return chunck.substring(0, split_index);
-}
-
-fn value(chunck: &str, split_index: usize) -> &str {
-    return chunck.substring(split_index + 1, chunck.len());
-}
-
-fn is_valid(codec: &str) -> bool {
-    return match codec {
-        "video" | "audio" | "subtitle" => true,
-        _ => false,
-    };
-}
-
-fn build_stream_from(mut chuncks: Split<&str>) -> Option<Stream> {
-    let mut stream = Stream::new();
-    while let Some(chunck) = chuncks.next() {
-        let split_index = split_index(chunck);
-        let key = key(chunck, split_index);
-        match key {
-            "codec_type" => {
-                let codec = value(chunck, split_index);
-                if(is_valid(codec)) {
-                    stream.set_codec(codec);
-                } else {
-                    break;
-                }
-            },
-            "codec_name" => {
-                let name = value(chunck, split_index);
-                stream.set_name(name);
-            },
-            "tag:language" | "TAG:language" | "tag:LANGUAGE" | "TAG:LANGUAGE" => {
-                let language = value(chunck, split_index);
-                stream.set_language(language);
-            },
-            _ => (),
-        };
-        if stream.is_filled() { return Some(stream); }
-    };
-    return None;
-}
-
-fn to_stream(line: String) -> Option<Stream> {
-    let mut chuncks = line.split("|");
-    return match chuncks.next() {
-        Some(first_chunck) => if("stream".eq(first_chunck)) { build_stream_from(chuncks) } else { None },
-        None => None,
-    };
+fn to_line(result: Result<String>) -> String {
+    return match result {
+        Ok(line) => line,
+        Err(e) => panic!("Error reading line : {e:?}")
+    }
 }
 
 fn stdout_reader(mut ffprobe_process: Child) -> Result<BufReader<ChildStdout>> {
@@ -75,10 +29,10 @@ fn stdout_streams(mut ffprobe_process: Child) -> Result<impl Iterator<Item = Str
     return match stdout_reader(ffprobe_process) {
         Ok(stdout_reader) => Ok(
                 stdout_reader.lines()
-                .map(Result::unwrap)
+                .map(to_line)
                 .map(to_stream)
                 .filter(Option::is_some)
-                .map(Option::unwrap)
+                .map(get_stream)
             ),
         Err(e) => Err(e),
     };
@@ -98,7 +52,72 @@ pub fn ffprobe<'a>(media_path: &str) -> Result<impl Iterator<Item = Stream>> {
     .spawn();
     return ffprobe_output(ffprobe_result);
 }
+  
+pub mod parsers {
+    use crate::ffprobe::streams::Stream;
+    use substring::Substring;
+    use core::str::Split;
+
+    fn split_index(chunck: &str) -> usize {
+        return match chunck.find('=') {
+            Some(index) => index,
+            None => panic!("Invalid stream chunck: {}", chunck),
+        };
+    }
     
+    fn key(chunck: &str, split_index: usize) -> &str {
+        return chunck.substring(0, split_index);
+    }
+    
+    fn value(chunck: &str, split_index: usize) -> &str {
+        return chunck.substring(split_index + 1, chunck.len());
+    }
+    
+    fn is_valid(codec: &str) -> bool {
+        return match codec {
+            "video" | "audio" | "subtitle" => true,
+            _ => false,
+        };
+    }
+    
+    fn build_stream_from(mut chuncks: Split<&str>) -> Option<Stream> {
+        let mut stream = Stream::new();
+        while let Some(chunck) = chuncks.next() {
+            let split_index = split_index(chunck);
+            let key = key(chunck, split_index);
+            match key {
+                "codec_type" => {
+                    let codec = value(chunck, split_index);
+                    if(is_valid(codec)) {
+                        stream.set_codec(codec);
+                    } else {
+                        break;
+                    }
+                },
+                "codec_name" => {
+                    let name = value(chunck, split_index);
+                    stream.set_name(name);
+                },
+                "tag:language" | "TAG:language" | "tag:LANGUAGE" | "TAG:LANGUAGE" => {
+                    let language = value(chunck, split_index);
+                    stream.set_language(language);
+                },
+                _ => (),
+            };
+            if stream.is_filled() { return Some(stream); }
+        };
+        return None;
+    }
+    
+    pub fn to_stream(line: String) -> Option<Stream> {
+        let mut chuncks = line.split("|");
+        return match chuncks.next() {
+            Some(first_chunck) => if("stream".eq(first_chunck)) { build_stream_from(chuncks) } else { None },
+            None => None,
+        };
+    }
+
+}
 
 pub mod streams {
     use std::borrow::Borrow;
