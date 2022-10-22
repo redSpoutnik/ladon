@@ -1,6 +1,6 @@
 #![allow(unused)]
 
-mod path;
+mod utils;
 mod terminal;
 mod ffprobe;
 mod search;

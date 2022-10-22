@@ -1,10 +1,10 @@
 use crate::ffprobe::ffprobe;
 use crate::ffprobe::streams::Stream;
-use crate::path::validation::{validate_directory, validate_output_file};
-use crate::path::media::{is_avi_file, is_non_avi_video_file};
+use crate::utils::validation::{validate_directory, validate_output_file};
+use crate::utils::path::{directory_entries, entry_path, file_type};
+use crate::utils::media::{is_avi_file, is_non_avi_video_file};
 use std::borrow::Borrow;
-use std::fs::{read_dir, DirEntry, File, FileType};
-use std::str;
+use std::fs::File;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::io::{Result, BufWriter, Write};
@@ -30,32 +30,6 @@ fn need_transcoding(media_path: &str) -> bool {
 
 fn should_record_file(path: &str) -> bool {
     return is_avi_file(&path) || (is_non_avi_video_file(&path) && need_transcoding(&path));
-}
-
-fn directory_entries<'a>(path: &'a str) -> impl Iterator<Item = DirEntry> + 'a{
-    return match read_dir(path) {
-        Ok(reader) => reader.map(|result| match result {
-            Ok(entry) => entry,
-            Err(e) => panic!("Error reading directory entry : {e:?}")
-        }),
-        Err(e) => panic!("Error reading directory entries from {path:?} : {e:?}"),
-    }
-}
-
-fn entry_path<'a>(entry: &DirEntry) -> String {
-    let entry_path_buf = entry.path();
-    let entry_path_os = entry_path_buf.as_os_str();
-    return match entry_path_os.to_str() {
-        Some(entry_path) => entry_path.to_string(),
-        None => panic!("Cannot convert path {entry_path_os:?} to str")
-    };
-}
-
-fn file_type(entry: &DirEntry, entry_path: &str) -> FileType {
-    return match entry.file_type() {
-        Ok(file_type) => file_type,
-        Err(e) => panic!("Error reading {entry_path:?} file type : {e:?}")
-    }
 }
 
 fn search_recursively(path: &str, output_writer_ref: Rc<RefCell<BufWriter<File>>>) {

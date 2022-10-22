@@ -67,7 +67,7 @@ impl Terminal {
     }
 }
 
-pub trait Exporter {
+pub trait ExportTerm {
 
     fn new(export_list_size: usize, export_directory: &str) -> Self;
 
@@ -79,7 +79,7 @@ pub trait Exporter {
 
 }
 
-impl Exporter for Terminal {
+impl ExportTerm for Terminal {
 
     fn new(export_list_size: usize, export_directory: &str) -> Self {
         Terminal { 
