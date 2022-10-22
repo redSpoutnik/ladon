@@ -45,9 +45,9 @@ fn ffprobe_output(result: Result<Child>) -> Result<impl Iterator<Item = Stream>>
     };
 }
 
-pub fn ffprobe<'a>(media_path: &str) -> Result<impl Iterator<Item = Stream>> {
+pub fn ffprobe<'a>(media_location: &str) -> Result<impl Iterator<Item = Stream>> {
     let mut ffprobe_result = Command::new("ffprobe")
-    .args(["-show_streams","-loglevel","quiet","-print_format","compact",media_path])
+    .args(["-show_streams","-loglevel","quiet","-print_format","compact",media_location])
     .stdout(Stdio::piped())
     .spawn();
     return ffprobe_output(ffprobe_result);
