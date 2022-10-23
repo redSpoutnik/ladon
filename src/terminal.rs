@@ -67,6 +67,73 @@ impl Terminal {
     }
 }
 
+pub trait ImportTerm {
+
+    fn new(import_list_size: usize, target_directory: &str) -> Self;
+
+    fn import_start(&self);
+    
+    fn update_import(&mut self, next_media: &str);
+
+    fn searching(&mut self);
+    
+    fn import_done(&self);
+
+}
+
+impl ImportTerm for Terminal {
+
+    fn new(import_list_size: usize, target_directory: &str) -> Self {
+        Terminal { 
+            stdout: Term::stdout(),
+            counter: Some(Counter::new(0, import_list_size)),
+            name: Some(target_directory.to_string()),
+        }
+    }
+
+    fn import_start(&self) {
+        match &self.counter {
+            Some(counter) => {
+                let list_size = counter.end;
+                self.print(&format!("Processing {list_size} medias...\nSearching... : 0/{list_size}"));
+            },
+            None => panic!("No counter avaiilable!")
+        }
+    }
+    
+    fn update_import(&mut self, media: &str) {
+        match &mut self.counter {
+            Some(counter) => {
+                let index = counter.incr();
+                let list_size = counter.end;
+                self.update(&format!("Import {media} : {index}/{list_size}"));
+            },
+            None => panic!("No counter avaiilable!")
+        }
+    }
+
+    fn searching(&mut self) {
+        match &self.counter {
+            Some(counter) => {
+                let index = counter.index;
+                let list_size = counter.end;
+                self.update(&format!("Searching... : {index}/{list_size}"));
+            },
+            None => panic!("No counter avaiilable!")
+        }
+    }
+    
+    fn import_done(&self) {
+        match &self.name {
+            Some(import_directory) => {
+                self.println(&format!("\nImport to {import_directory} ended"));
+            },
+            None => panic!("No import directory name available!")
+        }
+    }
+
+}
+
 pub trait ExportTerm {
 
     fn new(export_list_size: usize, export_directory: &str) -> Self;

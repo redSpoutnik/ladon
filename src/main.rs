@@ -5,10 +5,12 @@ mod terminal;
 mod ffprobe;
 mod search;
 mod export;
+mod import;
 
 use clap::Parser;
 use search::search_medias_to_transcode;
 use export::export_medias;
+use import::import_medias;
 
 #[derive(Parser)]
 #[clap(version)]
@@ -30,6 +32,12 @@ enum Actions {
         medias_list: String,
         #[clap(short, long, value_parser)]
         export_directory: String
+    },
+    Import {
+        #[clap(short, long, value_parser)]
+        input_directory: String,
+        #[clap(short, long, value_parser)]
+        target_directory: String
     }
 }
 
@@ -41,6 +49,9 @@ fn main() {
         },
         Actions::Export { medias_list, export_directory } => {
             export_medias(medias_list, export_directory)
+        },
+        Actions::Import { input_directory, target_directory } => {
+            import_medias(input_directory, target_directory)
         },
     }
 }

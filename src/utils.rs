@@ -69,11 +69,12 @@ pub mod path {
             Err(e) => panic!("Error reading {entry_location:?} file type : {e:?}")
         }
     }
+    
 }
 
 pub mod file {
     use std::io::{Result, BufRead, BufReader};
-    use std::fs::File;
+    use std::fs::{File, remove_file, rename};
     use std::path::Path;
     use substring::Substring;
 
@@ -122,6 +123,21 @@ pub mod file {
     pub fn read_lines(file_location: &str) -> impl Iterator<Item=String> {
         return file_reader(file_location).lines()
         .map(to_line); 
+    }
+
+    pub fn delete(file_location: &str) {
+        match remove_file(file_location) {
+            Ok(_) => (),
+            Err(e) => panic!("Error deleting {file_location}: {e:?}")
+        }
+    }
+
+    pub fn create_backup(file_location: &str) -> String {
+        let file_backup_location = format!("{file_location}.bckp");
+        return match rename(file_location, &file_backup_location) {
+            Ok(_) => file_backup_location,
+            Err(e) => panic!("Error Creating backup '{file_backup_location}' for '{file_location}' : {e:?}")
+        }
     }
 }
 
