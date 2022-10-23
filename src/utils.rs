@@ -13,7 +13,10 @@ pub mod validation {
     }
 
     fn is_valid_parent_path(path: &Path) -> bool {
-        return path.parent().unwrap().is_dir();
+        return match path.parent() {
+            Some(parent) => parent.is_dir(),
+            None => false
+        };
     }
 
     pub fn validate_output_file(output_file_location: &str) {
@@ -69,7 +72,7 @@ pub mod path {
             Err(e) => panic!("Error reading {entry_location:?} file type : {e:?}")
         }
     }
-    
+
 }
 
 pub mod file {
