@@ -55,22 +55,13 @@ pub fn ffprobe<'a>(media_location: &str) -> Result<impl Iterator<Item = Stream>>
   
 pub mod parsers {
     use crate::ffprobe::streams::{Stream, from};
-    use substring::Substring;
     use core::str::Split;
-
-    fn split_index(chunck: &str) -> usize {
-        return match chunck.find('=') {
-            Some(index) => index,
-            None => panic!("Invalid stream chunck: {}", chunck),
-        };
-    }
     
-    fn key(chunck: &str, split_index: usize) -> &str {
-        return chunck.substring(0, split_index);
-    }
-    
-    fn value(chunck: &str, split_index: usize) -> &str {
-        return chunck.substring(split_index + 1, chunck.len());
+    fn next_or_fail<'a>(pair: &'a mut Split<char>, chunck: &str) -> &'a str {
+        return match pair.next() {
+            Some(value) => value,
+            None => panic!("Invalid stream chunck: {chunck}"),
+        }
     }
     
     fn is_valid(codec: &str) -> bool {
@@ -83,11 +74,11 @@ pub mod parsers {
     fn build_stream_from(mut chuncks: Split<&str>) -> Option<Stream> {
         let mut stream = Stream::new();
         while let Some(chunck) = chuncks.next() {
-            let split_index = split_index(chunck);
-            let key = key(chunck, split_index);
+            let mut pair = chunck.split('=');
+            let key = next_or_fail(&mut pair, chunck);
             match key {
                 "codec_type" => {
-                    let codec = value(chunck, split_index);
+                    let codec = next_or_fail(&mut pair, chunck);
                     if(is_valid(codec)) {
                         stream.set_codec(from(codec));
                     } else {
@@ -95,11 +86,11 @@ pub mod parsers {
                     }
                 },
                 "codec_name" => {
-                    let name = value(chunck, split_index);
+                    let name = next_or_fail(&mut pair, chunck);
                     stream.set_name(name);
                 },
                 "tag:language" | "TAG:language" | "tag:LANGUAGE" | "TAG:LANGUAGE" => {
-                    let language = value(chunck, split_index);
+                    let language = next_or_fail(&mut pair, chunck);
                     stream.set_language(language);
                 },
                 _ => (),
