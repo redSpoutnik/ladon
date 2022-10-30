@@ -54,23 +54,14 @@ pub fn ffprobe<'a>(media_location: &str) -> Result<impl Iterator<Item = Stream>>
 }
   
 pub mod parsers {
-    use crate::ffprobe::streams::Stream;
-    use substring::Substring;
+    use crate::ffprobe::streams::{Stream, from};
     use core::str::Split;
-
-    fn split_index(chunck: &str) -> usize {
-        return match chunck.find('=') {
-            Some(index) => index,
-            None => panic!("Invalid stream chunck: {}", chunck),
-        };
-    }
     
-    fn key(chunck: &str, split_index: usize) -> &str {
-        return chunck.substring(0, split_index);
-    }
-    
-    fn value(chunck: &str, split_index: usize) -> &str {
-        return chunck.substring(split_index + 1, chunck.len());
+    fn next_or_fail<'a>(pair: &'a mut Split<char>, chunck: &str) -> &'a str {
+        return match pair.next() {
+            Some(value) => value,
+            None => panic!("Invalid stream chunck: {chunck}"),
+        }
     }
     
     fn is_valid(codec: &str) -> bool {
@@ -83,23 +74,23 @@ pub mod parsers {
     fn build_stream_from(mut chuncks: Split<&str>) -> Option<Stream> {
         let mut stream = Stream::new();
         while let Some(chunck) = chuncks.next() {
-            let split_index = split_index(chunck);
-            let key = key(chunck, split_index);
+            let mut pair = chunck.split('=');
+            let key = next_or_fail(&mut pair, chunck);
             match key {
                 "codec_type" => {
-                    let codec = value(chunck, split_index);
+                    let codec = next_or_fail(&mut pair, chunck);
                     if(is_valid(codec)) {
-                        stream.set_codec(codec);
+                        stream.set_codec(from(codec));
                     } else {
                         break;
                     }
                 },
                 "codec_name" => {
-                    let name = value(chunck, split_index);
+                    let name = next_or_fail(&mut pair, chunck);
                     stream.set_name(name);
                 },
                 "tag:language" | "TAG:language" | "tag:LANGUAGE" | "TAG:LANGUAGE" => {
-                    let language = value(chunck, split_index);
+                    let language = next_or_fail(&mut pair, chunck);
                     stream.set_language(language);
                 },
                 _ => (),
@@ -121,9 +112,37 @@ pub mod parsers {
 
 pub mod streams {
     use std::borrow::Borrow;
+    use std::cmp::Eq;
+    use std::fmt::{self, Debug};
+
+    #[derive(PartialEq, Eq)]
+    pub enum Codec {
+        Video,
+        Audio,
+        Subtitle,
+    }
+
+    impl Debug for Codec {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                Self::Video => write!(f, "Video"),
+                Self::Audio => write!(f, "Audio"),
+                Self::Subtitle => write!(f, "Subtitle"),
+            }
+        }
+    }
+
+    pub fn from(codec_type: &str) -> Codec {
+        return match codec_type {
+            "video" => Codec::Video,
+            "audio" => Codec::Audio,
+            "subtitle" => Codec::Subtitle,
+            _ => panic!("Unrecognize codec type : '{codec_type:?}'"),
+        }
+    }
 
     pub struct Stream {
-        codec: Option<String>,
+        codec: Option<Codec>,
         name: Option<String>,
         language: Option<String>,
     }
@@ -138,12 +157,12 @@ pub mod streams {
             }
         }
 
-        pub fn get_codec(&self) -> Option<&String> {
+        pub fn get_codec(&self) -> Option<&Codec> {
             return self.codec.as_ref();
         }
 
-        pub fn set_codec(&mut self, codec: &str) {
-            self.codec = Some(codec.to_string());
+        pub fn set_codec(&mut self, codec: Codec) {
+            self.codec = Some(codec);
         }
 
         pub fn get_name(&self) -> Option<&String> {
@@ -164,21 +183,21 @@ pub mod streams {
     
         pub fn is_video(&self) -> bool {
             return match self.get_codec() {
-                Some(codec) => "video".eq(codec),
+                Some(codec) => Codec::Video.eq(codec),
                 None => false,
             };
         }
 
         pub fn is_audio(&self) -> bool {
             return match self.get_codec() {
-                Some(codec) => "audio".eq(codec),
+                Some(codec) => Codec::Audio.eq(codec),
                 None => false,
             };
         }
 
         pub fn is_subtitle(&self) -> bool {
             return match self.get_codec() {
-                Some(codec) => "subtitle".eq(codec),
+                Some(codec) => Codec::Subtitle.eq(codec),
                 None => false,
             };
         }

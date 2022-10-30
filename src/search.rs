@@ -1,5 +1,5 @@
 use crate::ffprobe::ffprobe;
-use crate::ffprobe::streams::Stream;
+use crate::ffprobe::streams::{Codec, Stream};
 use crate::utils::validation::{validate_directory, validate_output_file};
 use crate::utils::path::{directory_entries, location_of, type_of};
 use crate::utils::media::{is_avi_file, is_non_avi_video_file};
@@ -11,10 +11,10 @@ use std::io::{Result, BufWriter, Write};
 
 fn is_invalid_media_stream(stream: Stream) -> bool {
     return match stream.get_codec() {
-        Some(codec) => match codec.as_str() {
-            "video" => return !stream.is_valid_video_stream(),
-            "audio" => return !stream.is_valid_audio_stream(),
-            "subtitle" => return !stream.is_valid_subtitle_stream(),
+        Some(codec) => match codec {
+            Codec::Video => return !stream.is_valid_video_stream(),
+            Codec::Audio => return !stream.is_valid_audio_stream(),
+            Codec::Subtitle => return !stream.is_valid_subtitle_stream(),
             _ => panic!("Invalid stream processing : codec type '{codec:?}'"),
         },
         None => panic!("Invalid stream processing : no codec type")
