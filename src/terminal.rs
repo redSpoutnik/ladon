@@ -1,5 +1,7 @@
 use std::{io::{Write, stdout}, borrow::BorrowMut};
 use console::Term;
+use chrono::offset::Local;
+use chrono::SecondsFormat;
 
 struct Counter {
     start: usize,
@@ -65,6 +67,10 @@ impl Terminal {
     pub fn println_below(&self, text: &str) {
         println!("\n{text}");
     }
+
+    pub fn now(&self) -> String {
+        return Local::now().to_rfc3339_opts(SecondsFormat::Secs, true);
+    }
 }
 
 pub trait ImportTerm {
@@ -95,7 +101,8 @@ impl ImportTerm for Terminal {
         match &self.counter {
             Some(counter) => {
                 let list_size = counter.end;
-                self.print(&format!("Processing {list_size} medias...\nSearching... : 0/{list_size}"));
+                let now = self.now();
+                self.print(&format!("{now:?} : Import started, processing {list_size} medias...\nSearching... : 0/{list_size}"));
             },
             None => panic!("No counter avaiilable!")
         }
@@ -126,7 +133,8 @@ impl ImportTerm for Terminal {
     fn import_done(&self) {
         match &self.name {
             Some(import_directory) => {
-                self.println(&format!("\nImport to {import_directory} ended"));
+                let now = self.now();
+                self.println_below(&format!("{now:?} : Import to {import_directory} ended"));
             },
             None => panic!("No import directory name available!")
         }
@@ -160,7 +168,8 @@ impl ExportTerm for Terminal {
         match &self.counter {
             Some(counter) => {
                 let list_size = counter.end;
-                self.print(&format!("Read {list_size} media paths...\nExport-- : 0/{list_size}"));
+                let now = self.now();
+                self.print(&format!("{now:?} : Export strarted, read {list_size} media paths...\nExport-- : 0/{list_size}"));
             },
             None => panic!("No counter avaiilable!")
         }
@@ -180,7 +189,8 @@ impl ExportTerm for Terminal {
     fn export_done(&self) {
         match &self.name {
             Some(export_directory) => {
-                self.println(&format!("\nExport to {export_directory} ended"));
+                let now = self.now();
+                self.println_below(&format!("{now:?} : Export to {export_directory} ended"));
             },
             None => panic!("No export directory name available!")
         }
